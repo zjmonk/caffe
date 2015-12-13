@@ -592,6 +592,48 @@ class MultinomialLogisticLossLayer : public LossLayer<Dtype> {
  *              \right]
  *      @f$
  */
+
+
+/**
+ * @brief Compute the semi-supervised pair loss
+ */
+template <typename Dtype>
+class SemiPairLossLayer : public LossLayer<Dtype> {
+ public:
+  explicit SemiPairLossLayer(const LayerParameter& param)
+      : LossLayer<Dtype>(param) {}
+  virtual void LayerSetUp(const vector<Blob<Dtype>*>& bottom,
+      const vector<Blob<Dtype>*>& top);
+
+  virtual inline int ExactNumBottomBlobs() const { return 2; }
+  virtual inline const char* type() const { return "SemiPairLoss"; }
+  /**
+   * Unlike most loss layers, in the TripletLossLayer we can backpropagate
+   * to the first three inputs.
+   */
+  virtual inline bool AllowForceBackward(const int bottom_index) const {
+    return bottom_index != 1;
+  }
+
+ protected:
+  /// @copydoc SemiPairLoss
+  virtual void Forward_cpu(const vector<Blob<Dtype>*>& bottom,
+      const vector<Blob<Dtype>*>& top);
+  virtual void Forward_gpu(const vector<Blob<Dtype>*>& bottom,
+      const vector<Blob<Dtype>*>& top);
+  virtual void Backward_cpu(const vector<Blob<Dtype>*>& top,
+      const vector<bool>& propagate_down, const vector<Blob<Dtype>*>& bottom);
+  virtual void Backward_gpu(const vector<Blob<Dtype>*>& top,
+      const vector<bool>& propagate_down, const vector<Blob<Dtype>*>& bottom);
+
+  // Similarity matrix S
+  Blob<Dtype> simi_s;
+  // Record theta caculated for each ij
+  Blob<Dtype> theta;
+
+};
+
+
 template <typename Dtype>
 class SigmoidCrossEntropyLossLayer : public LossLayer<Dtype> {
  public:

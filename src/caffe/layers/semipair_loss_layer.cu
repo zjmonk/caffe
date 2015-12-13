@@ -21,6 +21,6 @@ void SemiPairLossLayer<Dtype>::Backward_gpu(const vector<Blob<Dtype>*>& top,
   Backward_cpu(top, propagate_down, bottom);
 }
 
-INSTANTIATE_LAYER_GPU_FUNCS(TripletLossLayer);
+INSTANTIATE_LAYER_GPU_FUNCS(SemiPairLossLayer);
 
 }  // namespace caffe
