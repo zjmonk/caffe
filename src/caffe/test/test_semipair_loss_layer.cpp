@@ -55,6 +55,7 @@ namespace caffe {
         SemiPairLossLayer<Dtype> layer(layer_param);
         layer.SetUp(this->blob_bottom_vec_, this->blob_top_vec_);
         GradientChecker<Dtype> checker(1e-2, 1e-2, 1071);
+        printf("SemiPairLoss: Begin check Gradient\n");
         checker.CheckGradientExhaustive(&layer, this->blob_bottom_vec_, this->blob_top_vec_, 0);
     }
     
