@@ -45,10 +45,12 @@ void SemiPairLossLayer<Dtype>::Forward_cpu(
   // Calculate S matrix online
   for (int i = 0; i < num; i++) {
     for (int j = 0; j < num; j++) {
-      if (bottom_label[i] == bottom_label[j])
-         simi_s_data[i*num+j] = Dtype(1);
+       const int li = static_cast<int>(bottom_label[i]);
+       const int lj = static_cast<int>(bottom_label[j]);
+      if (li == lj)
+         simi_s_data[i*num+j] = 1;
       else
-         simi_s_data[i*num+j] = Dtype(0);
+         simi_s_data[i*num+j] = 0;
     }
   }
   // Calculate loss
@@ -56,9 +58,10 @@ void SemiPairLossLayer<Dtype>::Forward_cpu(
   // l = sum(sij*theta[i,j]-log(1+exp(theta[i,j])))
   for (int i = 0; i < num; i++) {
     for (int j = 0; j < num; j++) {
-       if (simi_s_data[i*num+j] == Dtype(1)) {
+       const int sij = static_cast<int>(simi_s_data[i*num+j]);
+       if (sij == 1) {
             theta_data[i*num + j] = Dtype(0.5)*caffe_cpu_dot(dim, bottom_data+i*dim, bottom_data+j*dim);
-            loss = loss - (simi_s_data[i*num+j]*theta_data[i*num+j] - log(Dtype(1)+exp(theta_data[i*num+j])));
+            loss = loss - (theta_data[i*num+j] - log(Dtype(1)+exp(theta_data[i*num+j])));
        }
     }
   }
@@ -76,24 +79,23 @@ void SemiPairLossLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& top,
     int count = bottom[0]->count();
     int num = bottom[0]->num();
     int dim = count/num;
-    Dtype formerPart = 0;
-    Dtype latterPart = 0;
-    Dtype one = Dtype(1);
-    Dtype mone = Dtype(-1);
+    Dtype one = Dtype(1.0);
+    Dtype formerPart = Dtype(0.0);
+    Dtype latterPart = Dtype(0.0);
     // Back propagation for each image
     // b[i,j] = 0.5*(sum(1/(1+exp(-theta[i,j])-s[i,j])*u(j)+sum(1/(1+exp(-theta[j,i])))
+    // since s[i,j] = 1, 1/(1+exp(x))-1=-exp(x)/(1+exp(x))
     for (int i = 0; i<num; i++){
-        for (int k = 0; k<dim; k++) {
-            for (int j =0; j<num; j++){
-               if (simi_s_data[i*num+j] == 1) {
-                   formerPart = bottom_data[j*dim+k]*(one/(one+exp(mone*(theta_data[i*num+j]))) - simi_s_data[i*num+j]);
-                   latterPart = bottom_data[j*dim+k]*(one/(one+exp(mone*(theta_data[j*num+i]))) - simi_s_data[j*num+i]);
-                   bottom_diff[i*dim+k] += Dtype(0.5)*(formerPart+latterPart);
-               }
-            }
+       Blob<Dtype> temp(dim, 1, 1, 1);
+       for (int j =0; j<num; j++){
+          if (simi_s_data[i*num+j] == Dtype(1.0)) {
+             formerPart = one/(one+exp(-theta_data[i*num+j]))-simi_s_data[i*num+j];
+             latterPart = one/(one+exp(-theta_data[j*num+i]))-simi_s_data[j*num+i];
+             caffe_cpu_axpby(dim, formerPart+latterPart, bottom_data+j*dim, Dtype(1.0), temp.mutable_cpu_data());
+           } // if end
         }
+       caffe_cpu_axpby(dim, Dtype(0.5), temp.cpu_data(), Dtype(0.0), bottom_diff+i*dim);
     }
-
     //const Dtype loss_weight = top[0]->cpu_diff()[0];
     caffe_scal(count, top[0]->cpu_diff()[0]/Dtype(num), bottom_diff);
 }
