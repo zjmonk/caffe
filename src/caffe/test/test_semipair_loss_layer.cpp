@@ -18,7 +18,7 @@ namespace caffe {
         typedef typename TypeParam::Dtype Dtype;
         protected:
         SemiPairLossLayerTest()
-            : blob_bottom_data_(new Blob<Dtype>(300,10,1,1)),
+            : blob_bottom_data_(new Blob<Dtype>(300,1,1,1)),
               blob_bottom_y_(new Blob<Dtype>(300,1,1,1)),
               blob_top_loss_(new Blob<Dtype>()) {
 
